@@ -1,18 +1,19 @@
-using System.Collections;
-using System.Collections.Generic;
+
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
-public class UIManager : MonoBehaviour
+public abstract class UIManager : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
+    [SerializeField] protected TMP_Text timerTxt, scoreText, finalScoreTxt;
+    [SerializeField] protected GameObject CoinPrefab, FinalResultPanel, IngameHud, pauseMenu;
+    [SerializeField] protected Transform coinSpawnner;
+    [SerializeField] protected Button restartBtn, backToMainMenuBtn,pauseBtn,resumeBtn;
+    protected void FinalResult()
     {
-        
+        IngameHud.SetActive(false); 
+
+        FinalResultPanel.SetActive(true);
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
 }

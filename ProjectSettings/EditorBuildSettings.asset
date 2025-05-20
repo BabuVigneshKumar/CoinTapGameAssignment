@@ -4,5 +4,20 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/Entry.unity
+    guid: ac97043ba53284a4daf89b9c4f00f754
+  - enabled: 1
+    path: Assets/Scenes/Loading.unity
+    guid: 7a65cd5915f79464cacf837705600a1c
+  - enabled: 1
+    path: Assets/Scenes/Login.unity
+    guid: e6004a2f4b5e7f043a58b5e650293a98
+  - enabled: 1
+    path: Assets/Scenes/MainMenu.unity
+    guid: 7f5ce804dd7fb83459203c105331185b
+  - enabled: 1
+    path: Assets/Scenes/CoinTapGame.unity
+    guid: 9fc0d4010bbf28b4594072e72b8655ab
   m_configObjects: {}
