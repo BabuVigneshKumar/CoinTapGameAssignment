@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c36ef0332c5f34d40aba3b66a4497572, type: 3}
+  m_Name: CoinTapAudioData
+  m_EditorClassIdentifier: 
+  audioData:
+  - clip: {fileID: 8300000, guid: d2e5465fc39d4fd4d820ac1e16cf2b27, type: 3}
+    audioName: 0
+    volume: 1
+    pitch: 1
+    Ismute: 0
+  - clip: {fileID: 8300000, guid: 80d95988083a39041bd7cd9198f4a906, type: 3}
+    audioName: 1
+    volume: 1
+    pitch: 1
+    Ismute: 0
+  - clip: {fileID: 8300000, guid: 2322e4ae885978a43a7f203443c93bd9, type: 3}
+    audioName: 2
+    volume: 1
+    pitch: 1
+    Ismute: 0
+  - clip: {fileID: 8300000, guid: 9dd2392ed2f3e6d4db1ec2bd3b64664d, type: 3}
+    audioName: 3
+    volume: 1
+    pitch: 1
+    Ismute: 0

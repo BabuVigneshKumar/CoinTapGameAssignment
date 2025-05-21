@@ -7,9 +7,12 @@ public class GameManager : UIManager
     [Header("CoinSpwan Properties")]
     [SerializeField] private int poolSize = 20;
     [SerializeField] private Queue<GameObject> coinPool = new Queue<GameObject>();
-    [SerializeField] private float gameTime = 30f;
+
+    [SerializeField] private float gameTimer = 30f;
+
     [SerializeField] private float spawnIntervalMin = 1f;
-    [SerializeField] private float spawnIntervalMax = 2f;
+    [SerializeField] private float spawnIntervalMax = 1.5f;
+
     [SerializeField] private int maxActiveCoins = 5;
 
     public int Score { get; private set; }
@@ -26,6 +29,10 @@ public class GameManager : UIManager
     [Header("Timers Properties")]
     private float remainingGameTime;
     private float nextCoinSpawnTime;
+
+    private float pauseStartTime;
+    private float totalPausedTime;
+
     private Coroutine gameTimerCoroutine;
     private Coroutine coinSpawnerCoroutine;
 
@@ -34,11 +41,7 @@ public class GameManager : UIManager
         if (instance == null)
         {
             instance = this;
-            DontDestroyOnLoad(this.gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
+ 
         }
     }
     private void OnDestroy()
@@ -54,6 +57,7 @@ public class GameManager : UIManager
                 }
             }
         }
+
     }
     private void Start()
     {
@@ -61,13 +65,9 @@ public class GameManager : UIManager
         pauseBtn.onClick.AddListener(PauseGame);
         backToMainMenuBtn.onClick.AddListener(BackToMainMenu);
         resumeBtn.onClick.AddListener(ResumeGame);
+        SoundToggle.onValueChanged.AddListener(ToggleSound);
+
         UpdateCurrentState(GameState.Init);
-    }
-    public void AddScore()
-    {
-        Score++;
-        OnScoreUpdated?.Invoke(Score);
-        scoreText.text = Score.ToString();
     }
 
     private void UpdateCurrentState(GameState newState)
@@ -84,20 +84,19 @@ public class GameManager : UIManager
             case GameState.Playing:
                 if (previousState == GameState.Init)
                 {
-              
-                    remainingGameTime = gameTime;
+
+                    remainingGameTime = gameTimer;
                     nextCoinSpawnTime = 0f;
 
-              
                     gameTimerCoroutine = StartCoroutine(GameTimer());
-                    //coinSpawnerCoroutine = StartCoroutine(CoinSpawner());
+                    coinSpawnerCoroutine = StartCoroutine(CoinSpawner());
                 }
                 break;
 
             case GameState.GameOver:
                 FinalResult();
 
-        
+
                 if (gameTimerCoroutine != null)
                     StopCoroutine(gameTimerCoroutine);
 
@@ -110,13 +109,15 @@ public class GameManager : UIManager
     private void GameInitalize()
     {
         InitializePool();
+        audioManager.StopAudio(Audioenum.GameBgm);
+        audioManager.PlayAudio(Audioenum.GameBgm, true);
         UpdateCurrentState(GameState.Playing);
     }
 
     private void InitializePool()
     {
         coinPool.Clear();
-
+        totalPausedTime = 0f;
         for (int i = 0; i < poolSize; i++)
         {
             GameObject coin = Instantiate(CoinPrefab, coinSpawnner);
@@ -129,78 +130,51 @@ public class GameManager : UIManager
         Score = 0;
         scoreText.text = "0";
     }
+
+    public void AddScore()
+    {
+        Score++;
+        OnScoreUpdated?.Invoke(Score);
+        scoreText.text = Score.ToString();
+    }
     private void OnCoinTapped(Coin tapped)
     {
         tapped.gameObject.SetActive(false);
         coinPool.Enqueue(tapped.gameObject);
+        audioManager.StopAudio(Audioenum.CoinTap);
+        audioManager.PlayAudio(Audioenum.CoinTap);
         AddScore();
     }
 
-    private void GameOver()
-    {
-        currentState = GameState.GameOver;
-        Debug.Log("Game Over! Final Score: " + Score);
-        finalScoreTxt.text = Score.ToString();
-        UpdateCurrentState(GameState.GameOver);
-        Score = 0;
-        scoreText.text = "0";
-    }
-    private void GameRestart()
-    {
-        GameObject[] activeCoins = GameObject.FindGameObjectsWithTag("Coin");
-        foreach (GameObject coin in activeCoins)
-        {
-            if (coin.activeInHierarchy)
-            {
-                coin.SetActive(false);
-                coinPool.Enqueue(coin);
-            }
-        }
-        UpdateCurrentState(GameState.Init);
-    }
-    private void BackToMainMenu()
-    {
-        SceneLoader.Instance.LoadSceneWithLoading("MainMenu", 1f);
-    }
-
-
     private IEnumerator GameTimer()
     {
-        float timeCount = 0f;
-        float spawnTimer = 0f;
-
-        float spawnInterval = 1f;
-
-        while (timeCount <= 30)
+        while (remainingGameTime > 0)
         {
-
-            while (currentState == GameState.Paused)
+            if (currentState == GameState.Playing)
             {
-                Debug.Log("Game paused !! ");
+                remainingGameTime -= Time.deltaTime;
+                timerTxt.text = Mathf.CeilToInt(remainingGameTime).ToString();
+            }
+            yield return null;
+        }
+        GameOver();
+    }
+    private IEnumerator CoinSpawner()
+    {
+        while (currentState != GameState.GameOver)
+        {
+            if (currentState == GameState.Playing)
+            {
+                float adjustedTime = Time.time - totalPausedTime;
 
-                yield return null;
+                if (adjustedTime >= nextCoinSpawnTime && CountActiveCoins() < maxActiveCoins)
+                {
+                    float spawnCoininterval = Random.Range(spawnIntervalMin, spawnIntervalMax);
+                    nextCoinSpawnTime = Time.time + spawnCoininterval;
+                    SpawnCoin();
+                }
             }
 
-            float delta = Time.deltaTime;
-            timeCount += delta;
-            spawnTimer += delta;
-
-
-            timerTxt.text = Mathf.RoundToInt(timeCount).ToString();
-
-            if (spawnTimer >= spawnInterval)
-            {
-                spawnTimer = 0f;
-                float randDelay = Random.Range(1f, 2f);
-
-                if (CountActiveCoins() < 5)
-                    StartCoroutine(SpawnCoin(randDelay));
-            }
-            if (timeCount >= 30f)
-            {
-                GameOver();
-                yield break;
-            }
             yield return null;
         }
     }
@@ -214,48 +188,101 @@ public class GameManager : UIManager
         }
         return count;
     }
-    private IEnumerator SpawnCoin(float delay)
+
+    private void SpawnCoin()
     {
-        float elapsed = 0f;
-
-        while (elapsed < delay)
-        {
-            if (currentState != GameState.Paused)
-            {
-                elapsed += Time.deltaTime;
-            }
-
-            yield return null;
-        }
         if (coinPool.Count > 0 && currentState == GameState.Playing)
         {
             float rangeX = Random.Range(-2.5f, 2.5f);
             float rangeY = Random.Range(-5f, 5f);
-
 
             GameObject coin = coinPool.Dequeue();
             coin.SetActive(true);
             coin.transform.position = new Vector3(rangeX, rangeY, 0);
         }
     }
+    public void ToggleSound(bool value)
+    {
+        SoundToggle.isOn = value;
+        Debug.Log("Audio Toggle Values ! " + value);
+        if (SoundToggle.isOn)
+            audioManager.StopAudio(Audioenum.ToggleSound);
+        audioManager.PlayAudio(Audioenum.ToggleSound);
+
+        if (SoundToggle.isOn)
+        {
+            Debug.Log("Audio Un muted !");
+
+            audioManager.SetVolumeUnMute();
+        }
+        else
+        {
+            Debug.Log("Audio muted !");
+            audioManager.SetVolumeMute();
+        }
+
+    }
 
     public void PauseGame()
     {
         if (currentState == GameState.Playing)
         {
+            pauseStartTime = Time.time;
             UpdateCurrentState(GameState.Paused);
             pauseMenu.SetActive(true);
+            audioManager.PlayAudio(Audioenum.ButtonTap);
+
         }
     }
 
     public void ResumeGame()
     {
+
         if (currentState == GameState.Paused)
         {
+            float pauseDuration = Time.time - pauseStartTime;
+            totalPausedTime += pauseDuration;
+            nextCoinSpawnTime += pauseDuration;
             UpdateCurrentState(GameState.Playing);
             pauseMenu.SetActive(false);
+
+            audioManager.StopAudio(Audioenum.GameBgm);
+            audioManager.PlayAudio(Audioenum.GameBgm, true);
         }
     }
+    public void BackToMainMenu()
+    {
+        audioManager.StopAudio(Audioenum.ButtonTap);
+        audioManager.PlayAudio(Audioenum.ButtonTap);
+        audioManager.StopAudio(Audioenum.GameBgm);
+        
+        SceneLoader.Instance.LoadSceneWithLoading("MainMenu", 1f);
+    }
+    private void GameOver()
+    {
+        currentState = GameState.GameOver;
+        Debug.Log("Game Over! Final Score: " + Score);
+        finalScoreTxt.text = Score.ToString();
+        UpdateCurrentState(GameState.GameOver);
+        Score = 0;
+        scoreText.text = "0";
+    }
+    private void GameRestart()
+    {
+        audioManager.PlayAudio(Audioenum.ButtonTap);
+
+        GameObject[] activeCoins = GameObject.FindGameObjectsWithTag("Coin");
+        foreach (GameObject coin in activeCoins)
+        {
+            if (coin.activeInHierarchy)
+            {
+                coin.SetActive(false);
+                coinPool.Enqueue(coin);
+            }
+        }
+        UpdateCurrentState(GameState.Init);
+    }
+
 }
 public enum GameState
 {
